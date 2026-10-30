@@ -32,6 +32,23 @@ export default function Home() {
           Explore. Discover. Collect Memories.
         </h2>
 
+        <a
+          href="/language"
+          style={{
+            display: "inline-block",
+            padding: "1rem 2rem",
+            background: "#2563EB",
+            color: "white",
+            borderRadius: "999px",
+            textDecoration: "none",
+            fontWeight: "bold",
+            marginTop: "1rem",
+            marginBottom: "2rem",
+          }}
+        >
+          🌍 Choose Your Language
+        </a>
+
         <p
           style={{
             maxWidth: "600px",
@@ -44,19 +61,21 @@ export default function Home() {
           story.
         </p>
 
-        <button
-          style={{
-            padding: "15px 35px",
-            fontSize: "20px",
-            borderRadius: "10px",
-            border: "none",
-            background: "#22c55e",
-            color: "white",
-            cursor: "pointer",
-          }}
-        >
-          🚀 Start Your Adventure
-        </button>
+        <a
+  href="/discover"
+  style={{
+    display: "inline-block",
+    padding: "15px 35px",
+    fontSize: "20px",
+    borderRadius: "10px",
+    background: "#22c55e",
+    color: "white",
+    cursor: "pointer",
+    textDecoration: "none",
+  }}
+>
+  🚀 Start Your Adventure
+</a>
       </div>
     </main>
   );
