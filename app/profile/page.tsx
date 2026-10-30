@@ -132,7 +132,7 @@ if (claims.length > 0) {
     setRecentDiscovery({
       name: discoveryData.name ?? latestClaim.id,
       location: `${discoveryData.city ?? ""} ${discoveryData.region ?? ""} ${discoveryData.country ?? ""}`.trim(),
-      rewardCoins: latestClaim.coinsAwarded ?? 0,
+      rewardCoins: discoveryData.rewardCoins ?? 0,
     });
   }
 }
