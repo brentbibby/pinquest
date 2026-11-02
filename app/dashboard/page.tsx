@@ -5,8 +5,36 @@ import { useEffect, useState } from "react";
 import { auth, db } from "@/lib/firebase";
 import { onAuthStateChanged, User } from "firebase/auth";
 import { collection, doc, getDoc, getDocs, setDoc } from "firebase/firestore";
+const welcomeGreetings = [
+  "Welcome back, {name}! Your next adventure awaits! 🌍",
+  "Great to see you again, {name}! Ready to explore?",
+  "Adventure is calling, {name}! 🧭",
+  "The world is waiting for you, {name}!",
+  "Where will curiosity take you today, {name}?",
+  "Another day, another adventure, {name}! 🌎",
+  "Ready to discover something amazing, {name}?",
+  "Your next unforgettable moment awaits, {name}!",
+  "Let's make some memories, {name}! 📍",
+  "There's always more to explore, {name}!",
+  "Every journey begins with curiosity, {name}!",
+  "Welcome aboard, {name}! Let's explore the world! 🚀",
+];
 export default function DashboardPage() {
   const [user, setUser] = useState<User | null>(null);
+  const [travelerName, setTravelerName] = useState("Explorer");
+  const [greetingIndex] = useState(() => {
+  if (typeof window === "undefined") return 0;
+
+  const previous = Number(
+    sessionStorage.getItem("pinquestLastGreeting") ?? -1
+  );
+
+  const next = (previous + 1) % welcomeGreetings.length;
+
+  sessionStorage.setItem("pinquestLastGreeting", String(next));
+
+  return next;
+});
   const [coins, setCoins] = useState(0);
   const [xp, setXp] = useState(0);
 const [level, setLevel] = useState(1);
@@ -22,7 +50,7 @@ useEffect(() => {
 
       if (userSnap.exists()) {
         const data = userSnap.data();
-
+setTravelerName(data.firstName || currentUser.displayName || "Explorer");
         setCoins(data.coins ?? 0);
         setXp(data.xp ?? 0);
         setLevel(Math.floor((data.xp ?? 0) / 500) + 1);
@@ -80,7 +108,7 @@ setClaimedDiscoveries(claimedNames);
           marginBottom: "10px",
         }}
       >
-      🌍 Welcome Back, {user?.email || "Explorer"}!
+      {welcomeGreetings[greetingIndex].replace("{name}", travelerName)}
       </h1>
 
       <a

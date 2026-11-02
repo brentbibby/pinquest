@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { auth } from "@/lib/firebase";
+import { auth, db } from "@/lib/firebase";
+import { doc, setDoc } from "firebase/firestore";
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
 export default function AuthPage() {
+  const [firstName, setFirstName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 const handleSignIn = async () => {
@@ -16,8 +18,25 @@ const handleSignIn = async () => {
   }
 };
   const handleCreateAccount = async () => {
+    if (!firstName.trim()) {
+  alert("Please enter your first name.");
+  return;
+}
   try {
-    await createUserWithEmailAndPassword(auth, email, password);
+    const userCredential = await createUserWithEmailAndPassword(
+  auth,
+  email,
+  password
+);
+
+await setDoc(doc(db, "users", userCredential.user.uid), {
+  email: userCredential.user.email,
+  firstName: firstName.trim() || "Explorer",
+  coins: 0,
+  xp: 0,
+  level: 1,
+  streak: 0,
+});
     alert("Welcome to PINQUEST! Your account has been created.");
     window.location.href = "/dashboard";
   } catch (error: any) {
@@ -48,7 +67,20 @@ return (
       <h1 style={{ textAlign: "center", marginBottom: "30px" }}>
         🌍 PINQUEST Sign In
       </h1>
-
+<input
+  type="text"
+  placeholder="First Name"
+  value={firstName}
+  onChange={(e) => setFirstName(e.target.value)}
+  style={{
+    width: "100%",
+    padding: "15px",
+    marginBottom: "15px",
+    borderRadius: "10px",
+    fontSize: "18px",
+    boxSizing: "border-box",
+  }}
+/>
       <input
         type="email"
         placeholder="Email"
@@ -97,7 +129,9 @@ return (
       >
         Sign In
       </button>
-      <button
+      
+      
+<button
   onClick={handleCreateAccount}
   style={{
     width: "100%",
