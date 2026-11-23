@@ -4,7 +4,7 @@
 import { useEffect, useState } from "react";
 import { auth, db } from "@/lib/firebase";
 import { onAuthStateChanged, User } from "firebase/auth";
-import { collection, doc, getDoc, getDocs, setDoc } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, query, where, setDoc } from "firebase/firestore";
 const welcomeGreetings = [
   "Welcome back, {name}! Your next adventure awaits! 🌍",
   "Great to see you again, {name}! Ready to explore?",
@@ -19,6 +19,26 @@ const welcomeGreetings = [
   "Every journey begins with curiosity, {name}!",
   "Welcome aboard, {name}! Let's explore the world! 🚀",
 ];
+function calculateDistance(
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number
+): number {
+  const R = 6371; // Earth's radius in kilometres
+  const toRadians = (degrees: number) => (degrees * Math.PI) / 180;
+
+  const dLat = toRadians(lat2 - lat1);
+  const dLon = toRadians(lon2 - lon1);
+
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRadians(lat1)) *
+      Math.cos(toRadians(lat2)) *
+      Math.sin(dLon / 2) ** 2;
+
+  return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
 export default function DashboardPage() {
   const [user, setUser] = useState<User | null>(null);
   const [travelerName, setTravelerName] = useState("Explorer");
@@ -39,6 +59,12 @@ export default function DashboardPage() {
   const [xp, setXp] = useState(0);
 const [level, setLevel] = useState(1);
 const [streak, setStreak] = useState(0);
+const [nearbyDiscoveries, setNearbyDiscoveries] = useState<
+  { id: string; name: string; distance: number }[]
+>([]);
+const [locationStatus, setLocationStatus] = useState(
+  "Waiting for GPS location..."
+);
 const [claimedDiscoveries, setClaimedDiscoveries] = useState<string[]>([]);
 useEffect(() => {
   const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -203,9 +229,7 @@ setClaimedDiscoveries(claimedNames);
             fontSize: "18px",
           }}
         >
-          <li>🏔️ Moraine Lake Rockpile</li>
-          <li>💦 Johnston Canyon Falls</li>
-          <li>🌄 Peyto Lake Viewpoint</li>
+          
         </ul>
 <div
   style={{

@@ -58,15 +58,15 @@ setLongitude(typeof data.longitude === "number" ? data.longitude : null);
 
   loadDiscovery();
 }, []);
-async function verifyGpsLocation(): Promise<boolean> {
+async function verifyGpsLocation(): Promise<GeolocationCoordinates | null> {
   if (latitude === null || longitude === null) {
     setGpsMessage("⚠️ GPS coordinates are unavailable for this discovery.");
-    return false;
+    return null;
   }
 
   if (!navigator.geolocation) {
     setGpsMessage("❌ Your device does not support GPS location.");
-    return false;
+    return null;
   }
 
   setGpsMessage("📡 Checking your location...");
@@ -82,7 +82,7 @@ if (gpsAccuracy > 50) {
   setGpsMessage(
     `⚠️ GPS accuracy is only ±${Math.round(gpsAccuracy)} metres. PINQUEST requires accuracy within 50 metres.`
   );
-  resolve(false);
+  resolve(null);
   return;
 }
         const toRadians = (degrees: number) =>
@@ -108,17 +108,17 @@ if (gpsAccuracy > 50) {
         if (distance <= 100) {
           setGpsVerified(true);
           setGpsMessage("✅ Location verified! You're within 100 metres.");
-          resolve(true);
+          resolve(position.coords);
         } else {
           setGpsMessage(
             `📍 You're ${Math.round(distance)} metres from this discovery.`
           );
-          resolve(false);
+          resolve(null);
         }
       },
       () => {
         setGpsMessage("❌ Unable to access your location. Please enable location permissions.");
-        resolve(false);
+        resolve(null);
       },
       {
         enableHighAccuracy: true,
@@ -439,81 +439,42 @@ return (
     "claims",
     discoveryId
   );
-const locationVerified = await verifyGpsLocation();
+const verifiedPosition = await verifyGpsLocation();
 
-if (!locationVerified) {
+if (!verifiedPosition) {
   return;
 }
   try {
-    const claimResult = await runTransaction(db, async (transaction) => {
-      const claimSnap = await transaction.get(claimRef);
-      const userSnap = await transaction.get(userRef);
-const userData = userSnap.exists() ? userSnap.data() : {};
-const currentXp = userData.xp ?? 0;
-const newXp = currentXp + rewardCoins;
-const currentLevel = Math.floor(currentXp / 500) + 1;
-const newLevel = Math.floor(newXp / 500) + 1;
-const currentStreak = userData.streak ?? 0;
-const lastPinDate = userData.lastPinDate ?? null;
+    const idToken = await currentUser.getIdToken();
+    const response = await fetch("/api/claim-discovery", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${idToken}`,
+  },
+  body: JSON.stringify({
+    discoveryId,
+    latitude: verifiedPosition.latitude,
+    longitude: verifiedPosition.longitude,
+    accuracy: verifiedPosition.accuracy,
+  }),
+});
 
-const today = new Date();
+const claimResult = await response.json();
 
-const formatLocalDate = (date: Date) => {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-
-  return `${year}-${month}-${day}`;
-};
-
-const todayString = formatLocalDate(today);
-
-let newStreak = 1;
-
-if (lastPinDate) {
-  const yesterday = new Date(today);
-  yesterday.setDate(today.getDate() - 1);
-
-  const yesterdayString = formatLocalDate(yesterday);
-
-  if (lastPinDate === todayString) {
-    newStreak = currentStreak;
-  } else if (lastPinDate === yesterdayString) {
-    newStreak = currentStreak + 1;
-  }
+if (!response.ok) {
+  throw new Error(
+    claimResult.error || "Unable to claim discovery."
+  );
 }
-      if (claimSnap.exists()) {
-        return true;
-      }
 
-      transaction.set(
-        userRef,
-        {
-          coins: increment(rewardCoins),
-          xp: increment(rewardCoins),
-          streak: newStreak,
-lastPinDate: todayString,
-        },
-        { merge: true }
-      );
-
-      transaction.set(claimRef, {
-        discoveryId: discoveryId,
-        claimedAt: serverTimestamp(),
-        coinsAwarded: rewardCoins,
-        xpAwarded: rewardCoins,
-      });
-
-      return newLevel > currentLevel ? newLevel : null;
-    });
-
-    if (claimResult === true) {
+    if (claimResult.alreadyClaimed === true) {
   alert("You already pinned this discovery.");
   return;
 }
 
-if (typeof claimResult === "number") {
-  setLevelUp(claimResult);
+if (typeof claimResult.levelUp === "number") {
+  setLevelUp(claimResult.levelUp);
 }
 
 setClaimed(true);
