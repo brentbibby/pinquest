@@ -128,6 +128,33 @@ if (gpsAccuracy > 50) {
     );
   });
 }
+function navigateToDiscovery() {
+  if (latitude === null || longitude === null) return;
+
+  const destination = `${latitude},${longitude}`;
+  const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${destination}`;
+
+  if (!navigator.geolocation) {
+    window.location.href = mapsUrl;
+    return;
+  }
+
+  navigator.geolocation.getCurrentPosition(
+    (position) => {
+      const origin = `${position.coords.latitude},${position.coords.longitude}`;
+
+      window.location.href = `${mapsUrl}&origin=${origin}`;
+    },
+    () => {
+      window.location.href = mapsUrl;
+    },
+    {
+      enableHighAccuracy: true,
+      timeout: 15000,
+      maximumAge: 0,
+    }
+  );
+}
 useEffect(() => {
   const unsubscribe = onAuthStateChanged(auth, async (user) => {
     if (!user) {
@@ -333,6 +360,10 @@ return (
   longitude !== null && (
     <a
       href={`https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}`}
+onClick={(event) => {
+  event.preventDefault();
+  navigateToDiscovery();
+}}
       target="_blank"
       rel="noopener noreferrer"
       style={{
@@ -492,13 +523,13 @@ setJustClaimed(true);
     fontSize: "24px",
     border: "none",
     borderRadius: "15px",
-    background: "#22c55e",
+    background: claimed ? "#9333ea" : "#22c55e",
     color: "white",
     cursor: "pointer",
     fontWeight: "bold",
   }}
 >
-  {claimed ? "✅ DISCOVERY PINNED" : "📍 PIN THIS DISCOVERY"}
+  {claimed ? "✅ DISCOVERY COMPLETE" : "📍 CLAIM MY DISCOVERY"}
 </button>  
 {gpsMessage && (
   <p
@@ -526,7 +557,7 @@ setJustClaimed(true);
     fontSize: "20px",
     border: "none",
     borderRadius: "15px",
-    background: saved ? "#64748b" : "#e11d48",
+    background: saved ? "#b45309" : "#d97706",
     color: "white",
     cursor: saved ? "default" : "pointer",
     fontWeight: "bold",

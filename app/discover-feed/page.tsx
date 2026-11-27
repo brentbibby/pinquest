@@ -1,4 +1,10 @@
 "use client";
+import dynamic from "next/dynamic";
+
+const DiscoveryMap = dynamic(
+  () => import("../components/DiscoveryMap"),
+  { ssr: false }
+);
 
 import { useEffect, useState } from "react";
 import { collection, getDocs, doc, setDoc, deleteDoc, serverTimestamp } from "firebase/firestore";
@@ -6,6 +12,38 @@ import { db, auth } from "@/lib/firebase";
 export default function DiscoverFeedPage() {
   const [discoveries, setDiscoveries] = useState<any[]>([]);
   const [savedIds, setSavedIds] = useState<string[]>([]);
+  const [claimedIds, setClaimedIds] = useState<string[]>([]);
+  const [userLocation, setUserLocation] = useState<{
+  latitude: number;
+  longitude: number;
+} | null>(null);
+
+const [locationMessage, setLocationMessage] =
+  useState("Waiting for your location...");
+  useEffect(() => {
+  if (!navigator.geolocation) {
+    setLocationMessage("Location is not supported.");
+    return;
+  }
+
+  navigator.geolocation.getCurrentPosition(
+    (position) => {
+      setUserLocation({
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+      });
+      setLocationMessage("📍 Your location detected.");
+    },
+    () => {
+      setLocationMessage("Please enable location permissions.");
+    },
+    {
+      enableHighAccuracy: true,
+      timeout: 15000,
+      maximumAge: 0,
+    }
+  );
+}, []);
   useEffect(() => {
   async function loadData() {
     const querySnapshot = await getDocs(collection(db, "discoveries"));
@@ -28,11 +66,41 @@ export default function DiscoverFeedPage() {
 
       const ids = savedSnapshot.docs.map((doc) => doc.id);
       setSavedIds(ids);
+      const claimsSnapshot = await getDocs(
+  collection(db, "users", user.uid, "claims")
+);
+
+setClaimedIds(claimsSnapshot.docs.map((doc) => doc.id));
     }
   }
 
   loadData();
 }, []);
+function calculateDistance(latitude: number, longitude: number) {
+  if (
+  !userLocation ||
+  !Number.isFinite(latitude) ||
+  !Number.isFinite(longitude) ||
+  Math.abs(latitude) > 90 ||
+  Math.abs(longitude) > 180
+) {
+  return Infinity;
+}
+
+  const toRadians = (degrees: number) =>
+    (degrees * Math.PI) / 180;
+
+  const dLat = toRadians(latitude - userLocation.latitude);
+  const dLon = toRadians(longitude - userLocation.longitude);
+
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRadians(userLocation.latitude)) *
+    Math.cos(toRadians(latitude)) *
+    Math.sin(dLon / 2) ** 2;
+
+  return 6371000 * 2 * Math.asin(Math.sqrt(Math.min(1, a)));
+}
 async function saveDiscovery(discoveryId: string) {
   const user = auth.currentUser;
 
@@ -96,9 +164,46 @@ async function unsaveDiscovery(discoveryId: string) {
       >
         Amazing experiences recommended by travelers around the world.
       </p>
+<p style={{ color: "#38bdf8", marginBottom: "20px" }}>
+  {locationMessage}
+</p>
+<div
+  style={{
+    display: "flex",
+    flexWrap: "wrap",
+    gap: "24px",
+    marginBottom: "20px",
+    fontWeight: "bold",
+  }}
+>
+  <span style={{ color: "#38bdf8" }}>
+    ● Your Location
+  </span>
 
-      
-        {discoveries.map((place) => (
+  <span style={{ color: "#22c55e" }}>
+    ● Available to Discover
+  </span>
+
+  <span style={{ color: "#c084fc" }}>
+    ● Already Discovered
+  </span>
+</div>
+  {userLocation && (
+  <DiscoveryMap
+    userLocation={userLocation}
+    discoveries={discoveries}
+    claimedIds={claimedIds}
+  />
+)}
+    
+        {[...discoveries]
+  .sort((a, b) => {
+    const distanceA = calculateDistance(a.latitude, a.longitude);
+    const distanceB = calculateDistance(b.latitude, b.longitude);
+
+    return distanceA - distanceB;
+  })
+  .map((place) => (
   <div
     key={place.id}
     style={{
@@ -112,6 +217,13 @@ async function unsaveDiscovery(discoveryId: string) {
           <h2>{place.name}</h2>
 
           <p>{place.country}</p>
+          <p style={{ color: "#38bdf8" }}>
+  📍 {Number.isFinite(calculateDistance(place.latitude, place.longitude))
+    ? calculateDistance(place.latitude, place.longitude) < 1000
+  ? `${Math.round(calculateDistance(place.latitude, place.longitude))} metres away`
+  : `${(calculateDistance(place.latitude, place.longitude) / 1000).toFixed(2)} km away`
+    : "Distance unavailable"}
+</p>
 
           <p>⭐ Explorer Score: {place.explorerScore != null ? `${place.explorerScore}/10` : "Not rated"}</p>
 
