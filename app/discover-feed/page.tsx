@@ -26,7 +26,7 @@ const [locationMessage, setLocationMessage] =
     return;
   }
 
-  navigator.geolocation.getCurrentPosition(
+  const watchId = navigator.geolocation.watchPosition(
     (position) => {
       setUserLocation({
         latitude: position.coords.latitude,
@@ -43,6 +43,9 @@ const [locationMessage, setLocationMessage] =
       maximumAge: 0,
     }
   );
+  return () => {
+  navigator.geolocation.clearWatch(watchId);
+};
 }, []);
   useEffect(() => {
   async function loadData() {
