@@ -60,7 +60,8 @@ const [locationMessage, setLocationMessage] =
 
     setDiscoveries(discoveryList);
 
-    const user = auth.currentUser;
+    await auth.authStateReady();
+const user = auth.currentUser;
 
     if (user) {
       const savedSnapshot = await getDocs(
